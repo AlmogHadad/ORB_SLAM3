@@ -610,6 +610,7 @@ void KeyFrameDatabase::DetectNBestCandidates(KeyFrame *pKF, vector<KeyFrame*> &v
 
 
 
+
     // Search all keyframes that share a word with current frame
     {
         unique_lock<mutex> lock(mMutex);
@@ -641,6 +642,7 @@ void KeyFrameDatabase::DetectNBestCandidates(KeyFrame *pKF, vector<KeyFrame*> &v
     if(lKFsSharingWords.empty())
         return;
 
+    /*
     // Only compare against those keyframes that share enough words
     int maxCommonWords=0;
     for(list<KeyFrame*>::iterator lit=lKFsSharingWords.begin(), lend= lKFsSharingWords.end(); lit!=lend; lit++)
@@ -671,6 +673,19 @@ void KeyFrameDatabase::DetectNBestCandidates(KeyFrame *pKF, vector<KeyFrame*> &v
 
     if(lScoreAndMatch.empty())
         return;
+
+    */
+    // our changes begin
+    list<pair<float,KeyFrame*> > lScoreAndMatch;
+    spConnectedKF = pKF->GetConnectedKeyFrames(); //mvInvertedFile
+
+    int si = 0;
+    for(list<KeyFrame*>::iterator lit=lKFsSharingWords.begin(), lend= lKFsSharingWords.end(); lit!=lend; lit++)
+    {
+        lScoreAndMatch.push_back(make_pair(si,*lit));
+        si++;
+    }
+    // our changes end
 
     list<pair<float,KeyFrame*> > lAccScoreAndMatch;
     float bestAccScore = 0;
