@@ -21,7 +21,7 @@
 
 #include "KeyFrame.h"
 #include "Thirdparty/DBoW2/DBoW2/BowVector.h"
-
+#include "ORBmatcher.h"
 #include<mutex>
 
 using namespace std;
@@ -604,7 +604,11 @@ bool compFirst(const pair<float, KeyFrame*> & a, const pair<float, KeyFrame*> & 
 void KeyFrameDatabase::DetectNBestCandidates(KeyFrame *pKF, vector<KeyFrame*> &vpLoopCand, vector<KeyFrame*> &vpMergeCand, int nNumCandidates)
 {
     list<KeyFrame*> lKFsSharingWords;
-    set<KeyFrame*> spConnectedKF;
+    set<KeyFrame*> spConnectedKF; //replace with unordered_map<id,std::vector>
+
+    float th = 0.6f;
+
+
 
     // Search all keyframes that share a word with current frame
     {
@@ -670,34 +674,53 @@ void KeyFrameDatabase::DetectNBestCandidates(KeyFrame *pKF, vector<KeyFrame*> &v
 
     list<pair<float,KeyFrame*> > lAccScoreAndMatch;
     float bestAccScore = 0;
+    ORBmatcher matcher(th,false);
 
     // Lets now accumulate score by covisibility
     for(list<pair<float,KeyFrame*> >::iterator it=lScoreAndMatch.begin(), itend=lScoreAndMatch.end(); it!=itend; it++)
     {
         KeyFrame* pKFi = it->second;
-        vector<KeyFrame*> vpNeighs = pKFi->GetBestCovisibilityKeyFrames(10);
 
-        float bestScore = it->first;
-        float accScore = bestScore;
-        KeyFrame* pBestKF = pKFi;
-        for(vector<KeyFrame*>::iterator vit=vpNeighs.begin(), vend=vpNeighs.end(); vit!=vend; vit++)
-        {
-            KeyFrame* pKF2 = *vit;
-            if(pKF2->mnPlaceRecognitionQuery!=pKF->mnId)
-                continue;
 
-            accScore+=pKF2->mPlaceRecognitionScore;
-            if(pKF2->mPlaceRecognitionScore>bestScore)
-            {
-                pBestKF=pKF2;
-                bestScore = pKF2->mPlaceRecognitionScore;
-            }
+        vector<pair<size_t,size_t> > vMatchedIndices;
 
-        }
-        lAccScoreAndMatch.push_back(make_pair(accScore,pBestKF));
-        if(accScore>bestAccScore)
-            bestAccScore=accScore;
+        matcher.SearchForTriangulation(pKF,pKFi,vMatchedIndices,false,true);
+        int nmatches = vMatchedIndices.size();
+
+        cout << "triangulation matches:" << nmatches << endl;
+
+        lAccScoreAndMatch.push_back(make_pair(nmatches,pKFi));
+
+
+        // vector<KeyFrame*> vpNeighs = pKFi->GetBestCovisibilityKeyFrames(10);
+
+        // float bestScore = it->first;
+        // float accScore = bestScore;
+        // KeyFrame* pBestKF = pKFi;
+        // for(vector<KeyFrame*>::iterator vit=vpNeighs.begin(), vend=vpNeighs.end(); vit!=vend; vit++)
+        // {
+        //     KeyFrame* pKF2 = *vit;
+        //     if(pKF2->mnPlaceRecognitionQuery!=pKF->mnId)
+        //         continue;
+
+        //     accScore+=pKF2->mPlaceRecognitionScore;
+        //     if(pKF2->mPlaceRecognitionScore>bestScore)
+        //     {
+        //         pBestKF=pKF2;
+        //         bestScore = pKF2->mPlaceRecognitionScore;
+        //     }
+
+        // }
+        // lAccScoreAndMatch.push_back(make_pair(accScore,pBestKF));
+        // if(accScore>bestAccScore)
+        //     bestAccScore=accScore;
+
+
     }
+
+
+
+
 
     lAccScoreAndMatch.sort(compFirst);
 
